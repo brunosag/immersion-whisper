@@ -1,0 +1,80 @@
+:root {
+	--zinc-50: oklch(0.985 0 0);
+	--zinc-100: oklch(0.967 0.001 286.375);
+	--zinc-200: oklch(0.92 0.004 286.32);
+	--zinc-300: oklch(0.871 0.006 286.286);
+	--zinc-400: oklch(0.705 0.015 286.067);
+	--zinc-500: oklch(0.552 0.016 285.938);
+	--zinc-600: oklch(0.442 0.017 285.786);
+	--zinc-700: oklch(0.37 0.013 285.805);
+	--zinc-800: oklch(0.274 0.006 286.033);
+	--zinc-900: oklch(0.21 0.006 285.885);
+	--zinc-950: oklch(0.141 0.005 285.823);
+}
+
+.card {
+	background-color: var(--zinc-900) !important;
+	padding: 2rem;
+}
+
+.container {
+	background-color: var(--zinc-800);
+	border-radius: 1.5rem;
+	border: 1px solid var(--zinc-700);
+	margin: 0 auto;
+	max-width: 48rem;
+	text-align: center;
+	padding: 3rem;
+	display: flex;
+	flex-direction: column;
+	gap: 1.5rem;
+}
+
+.front-audios {
+	display: flex;
+	gap: 0.5rem;
+	justify-content: center;
+}
+
+.divider {
+	border: none;
+	border-bottom: 1px solid var(--zinc-700);
+	margin: 0;
+}
+
+img {
+	border-radius: 1rem;
+	max-height: 20rem;
+}
+
+.replay-button {
+	margin: 0;
+}
+
+.replay-button svg {
+	width: 3rem;
+	height: 3rem;
+}
+
+.replay-button svg circle {
+	fill: var(--zinc-700);
+	stroke: var(--zinc-500);
+}
+
+.replay-button svg path {
+	fill: var(--zinc-400);
+	transform: scale(0.5);
+	transform-origin: center;
+}
+
+.replay-button svg:hover circle {
+	fill: var(--zinc-600);
+}
+
+.replay-button svg:active circle {
+	fill: var(--zinc-500);
+}
+
+.replay-button svg:hover path {
+	fill: var(--zinc-300);
+}
