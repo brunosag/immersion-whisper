@@ -8,7 +8,7 @@ import ffmpeg
 from faster_whisper import WhisperModel
 from faster_whisper.transcribe import VadOptions
 
-from condenser import condense
+from .condenser import condense
 
 logging.basicConfig()
 logging.getLogger("faster_whisper").setLevel(logging.WARNING)
@@ -65,21 +65,18 @@ def transcribe(
     is_temp_file = processing_file_path != input_file
 
     try:
-        if compute_type == "auto":
-            compute_type = "float16" if device == "cuda" else "int8"
-
         model = WhisperModel(
-            model_size,
-            device=device,
+            "large-v3-turbo",
+            device="cuda",
             device_index=0,
-            compute_type=compute_type,
+            compute_type="float16",
         )  # type: ignore
 
         vad_parameters = VadOptions(
-            threshold=0.45,
-            neg_threshold=0.45,
+            threshold=0.65,
+            neg_threshold=0.55,
             min_speech_duration_ms=100,
-            max_speech_duration_s=5,
+            max_speech_duration_s=3,
             min_silence_duration_ms=250,
             speech_pad_ms=700,
         )
@@ -89,7 +86,7 @@ def transcribe(
             language="fr",
             word_timestamps=True,
             log_progress=True,
-            hotwords="Gon, Kirua, Greed Island",
+            hotwords="Gon, Kirua, Greed Island, Hisoka, Nen, Razor, Jin, Book, Gyo",
             vad_filter=True,
             vad_parameters=vad_parameters,
         )

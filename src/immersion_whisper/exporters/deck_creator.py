@@ -1,3 +1,4 @@
+import importlib.resources
 import shutil
 import subprocess
 import sys
@@ -5,11 +6,6 @@ from pathlib import Path
 
 import genanki
 import pysrt
-
-
-def stringify_file(filepath: str | Path) -> str:
-    return Path(filepath).read_text(encoding="utf-8")
-
 
 IMAGE_QUALITY = "5"
 IMAGE_RESOLUTION = "640x360"
@@ -22,6 +18,9 @@ def time_to_seconds(t: pysrt.SubRipTime) -> float:
 
 def initialize_anki_components(deck_name: str):
     print("Initializing Anki components...")
+
+    template_path = importlib.resources.files(".exporters") / "templates"
+
     model_name = "ankigen"
     model_id = hash(model_name) % (1 << 31)
     deck_id = hash(deck_name) % (1 << 31)
@@ -36,17 +35,18 @@ def initialize_anki_components(deck_name: str):
     ]
     template = {
         "name": "ankigen",
-        "qfmt": stringify_file("anki/front.html"),
-        "afmt": stringify_file("anki/back.html"),
+        "qfmt": (template_path / "front.html").read_text(encoding="utf-8"),
+        "afmt": (template_path / "back.html").read_text(encoding="utf-8"),
     }
     model = genanki.Model(
         model_id,
         model_name,
         fields=[dict(name=name) for name in fields],
         templates=[template],
-        css=stringify_file("anki/styles.css"),
+        css=(template_path / "styles.css").read_text(encoding="utf-8"),
     )
     deck = genanki.Deck(deck_id, deck_name)
+
     return model, deck
 
 

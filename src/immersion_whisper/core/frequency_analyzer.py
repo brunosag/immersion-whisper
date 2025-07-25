@@ -28,8 +28,8 @@ def parse_srt(file_path):
 
 def analyze_text(file_path, nlp_model):
     """
-    Takes a file path and a spaCy model, analyzes the text,
-    and prints the word frequency.
+    Takes a file path and a spaCy model, analyzes
+    the text, and prints the word frequency.
     """
     clean_text = parse_srt(file_path)
     doc = nlp_model(clean_text)
