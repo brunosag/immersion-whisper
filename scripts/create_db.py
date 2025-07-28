@@ -1,4 +1,4 @@
-from immersion_whisper.database.models import create_tables
+from immersion_whisper.database.setup import create_db
 
 if __name__ == "__main__":
-    create_tables()
+    create_db()
