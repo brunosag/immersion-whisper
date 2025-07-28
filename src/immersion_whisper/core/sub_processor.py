@@ -8,120 +8,158 @@ from ..database.models import Lemma, Subtitle, SubtitleLemma, db
 
 logger = logging.getLogger(__name__)
 
+_NLP_MODEL = None
 
-class SubtitleBatch:
-    _instance = None
-    _nlp_model = None
 
-    def __new__(cls):
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-            cls._instance._init_once()
-        return cls._instance
+def get_nlp():
+    """Lazily loads the spaCy model."""
+    global _NLP_MODEL
+    if _NLP_MODEL is None:
+        _NLP_MODEL = spacy.load("fr_dep_news_trf", disable=["parser", "ner"])
+    return _NLP_MODEL
 
-    def _init_once(self):
-        self.subtitles = []
-        self.lemma_cache = {}
-        self._load_lemmas()
 
-    @staticmethod
-    def get_nlp():
-        if SubtitleBatch._nlp_model is None:
-            SubtitleBatch._nlp_model = spacy.load("fr_dep_news_trf")
-        return SubtitleBatch._nlp_model
+class SubtitleProcessor:
+    def __init__(self):
+        self.subtitles_data: list[dict] = []
+        self.lemma_cache: dict[str, int] | None = None
 
-    def _load_lemmas(self):
-        self.lemma_cache = {lemma.text: lemma.id for lemma in Lemma.select()}
+    def _load_cache_if_needed(self):
+        """
+        Loads the lemma cache, assuming the database and tables already exist.
+        """
+        if self.lemma_cache is None:
+            try:
+                self.lemma_cache = {
+                    lemma.text: lemma.id for lemma in Lemma.select(Lemma.id, Lemma.text)
+                }
+            except Exception as e:
+                logger.error(f"Error loading lemma cache: {e}")
+                raise
 
-    def add(self, text, episode, start, end):
-        lemmas = self.lemmatize(text)
-        self.subtitles.append(
+    def add(self, text: str, episode: int, start: float, end: float):
+        """Adds raw subtitle data to the internal storage."""
+        self.subtitles_data.append(
             {
                 "text": text,
                 "episode_number": episode,
                 "starts_at": start,
                 "ends_at": end,
-                "lemmas": lemmas,
             }
         )
 
-    def process(self):
-        if not self.subtitles:
-            return
-        try:
-            with db.atomic():
-                df = pd.DataFrame(self.subtitles)
-                all_lemmas = set(lem for lemma in df["lemmas"] for lem in (lemma or []))
-                new_lemmas = [
-                    {"text": lemma, "frequency": 0}
-                    for lemma in all_lemmas
-                    if lemma not in self.lemma_cache
+    def _lemmatize_batch(self, texts: list[str]) -> list[list[str]]:
+        """Lemmatizes a batch of texts."""
+        nlp = get_nlp()
+        lemmas_list: list[list[str]] = []
+        for doc in nlp.pipe(texts):
+            lemmas_list.append(
+                [
+                    token.lemma_.lower()
+                    for token in doc
+                    if token.is_alpha and not token.is_stop and not token.is_punct
                 ]
-                if new_lemmas:
-                    Lemma.insert_many(new_lemmas).execute()
-                    self._load_lemmas()
-                subs = df[["text", "episode_number", "starts_at", "ends_at"]].to_dict(
-                    "records"
+            )
+        return lemmas_list
+
+    def process(self):
+        """Processes the entire batch of subtitles."""
+        self._load_cache_if_needed()
+        logger.info("Processing subtitle batch...")
+
+        if not self.subtitles_data or self.lemma_cache is None:
+            return
+
+        try:
+            df = pd.DataFrame(self.subtitles_data)
+            df["lemmas"] = self._lemmatize_batch(df["text"].tolist())
+
+            with db.atomic():
+                # Identify and insert new lemmas
+                exploded_df = df.explode("lemmas").dropna(subset=["lemmas"])
+                all_lemmas_in_batch = set(exploded_df["lemmas"])
+                new_lemma_texts = all_lemmas_in_batch - self.lemma_cache.keys()
+
+                if new_lemma_texts:
+                    new_lemma_records = [{"text": t} for t in new_lemma_texts]
+                    Lemma.insert_many(new_lemma_records).execute()
+
+                    # Update cache with the new lemmas
+                    newly_added = Lemma.select().where(Lemma.text.in_(new_lemma_texts))
+                    for lemma in newly_added:
+                        self.lemma_cache[lemma.text] = lemma.id
+
+                # Insert subtitles
+                sub_records = df[
+                    ["text", "episode_number", "starts_at", "ends_at"]
+                ].to_dict("records")
+                if not sub_records:
+                    return
+                Subtitle.insert_many(sub_records).execute()
+
+                # Fetch inserted subtitles to get their DB IDs
+                fetched_subs = Subtitle.select().where(
+                    Subtitle.text.in_(df["text"].unique().tolist())
                 )
-                if subs:
-                    Subtitle.insert_many(subs).execute()
-                    sub_ids = {
-                        (s.text, s.episode_number, s.starts_at, s.ends_at): s.id
-                        for s in Subtitle.select().where(
-                            Subtitle.text.in_([r["text"] for r in subs])
+                sub_id_map = {
+                    (s.text, s.episode_number, s.starts_at, s.ends_at): s.id
+                    for s in fetched_subs
+                }
+                df["subtitle_id"] = df.apply(
+                    lambda row: sub_id_map.get(
+                        (
+                            row["text"],
+                            row["episode_number"],
+                            row["starts_at"],
+                            row["ends_at"],
                         )
-                    }
-                    rels = [
-                        {
-                            "subtitle": sub_ids[
-                                (
-                                    sub["text"],
-                                    sub["episode_number"],
-                                    sub["starts_at"],
-                                    sub["ends_at"],
-                                )
-                            ],
-                            "lemma": self.lemma_cache[lemma],
-                        }
-                        for sub in self.subtitles
-                        for lemma in (sub["lemmas"] or [])
-                        if lemma in self.lemma_cache
+                    ),  # type: ignore
+                    axis=1,
+                )
+
+                # Prepare and insert many-to-many relationships using the DataFrame
+                rels_df = df.explode("lemmas").dropna(subset=["lemmas", "subtitle_id"])
+                if not rels_df.empty:
+                    rels_df["lemma_id"] = rels_df["lemmas"].map(self.lemma_cache)
+                    rels_to_insert = [
+                        {"subtitle": r["subtitle_id"], "lemma": r["lemma_id"]}
+                        for r in rels_df[["subtitle_id", "lemma_id"]].to_dict("records")
                     ]
-                    if rels:
-                        for i in range(0, len(rels), 500):
-                            SubtitleLemma.insert_many(rels[i : i + 500]).execute()
-                    for lemma_id in self.lemma_cache.values():
-                        subtitle_ids = [
-                            sl.subtitle.id
-                            for sl in SubtitleLemma.select().where(
-                                SubtitleLemma.lemma == lemma_id
-                            )
-                        ]
-                        if subtitle_ids:
-                            random_sub_id = random.choice(subtitle_ids)
-                            Lemma.update(card_subtitle=random_sub_id).where(
-                                Lemma.id == lemma_id
-                            ).execute()
+                    if rels_to_insert:
+                        SubtitleLemma.insert_many(rels_to_insert).execute()
+
+                # Select a random associated subtitle for every lemma in the batch
+                lemmas_in_batch_ids = {
+                    self.lemma_cache[lemma_text] for lemma_text in all_lemmas_in_batch
+                }
+                lemma_to_subtitles_map = (
+                    rels_df.groupby("lemma_id")["subtitle_id"].apply(list).to_dict()
+                )
+                lemmas_to_update = [
+                    Lemma(
+                        id=lemma_id, card_subtitle=random.choice(associated_subtitles)
+                    )
+                    for lemma_id in lemmas_in_batch_ids
+                    if (associated_subtitles := lemma_to_subtitles_map.get(lemma_id))
+                ]
+                if lemmas_to_update:
+                    Lemma.bulk_update(lemmas_to_update, fields=[Lemma.card_subtitle])
+
         except Exception as e:
-            logger.error(f"Batch error: {e}")
+            logger.error(f"Batch processing error: {e}")
             raise
         finally:
-            self.subtitles.clear()
+            self.subtitles_data.clear()
 
-    @staticmethod
-    def process_subtitle(text, episode, start, end):
-        SubtitleBatch().add(text, episode, start, end)
 
-    @staticmethod
-    def flush_batch():
-        SubtitleBatch().process()
+_processor = SubtitleProcessor()
 
-    @staticmethod
-    def lemmatize(text):
-        nlp = SubtitleBatch.get_nlp()
-        doc = nlp(text)
-        return [
-            token.lemma_.lower()
-            for token in doc
-            if not token.is_stop and not token.is_punct and token.is_alpha
-        ]
+
+def process_subtitle(text: str, episode: int, start: float, end: float):
+    """Public API to add a subtitle to the batch."""
+    _processor.add(text, episode, start, end)
+
+
+def flush_batch():
+    """Public API to process the current batch."""
+    _processor.process()

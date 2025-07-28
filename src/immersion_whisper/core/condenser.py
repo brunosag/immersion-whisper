@@ -20,8 +20,6 @@ def condense(wav_file: Path, srt_file: Path):
         print("CONDENSED_AUDIO_DIR environment variable is not set. Exiting.")
         sys.exit(1)
 
-    print(f"Condensing audio: {wav_file}")
-
     audio = AudioSegment.from_wav(str(wav_file))
     subs = pysrt.open(str(srt_file))
 
