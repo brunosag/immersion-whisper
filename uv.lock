@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.12"
 
 [[package]]
@@ -453,7 +453,7 @@ wheels = [
 [[package]]
 name = "immersion-whisper"
 version = "0.1.0"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
     { name = "dotenv" },
     { name = "faster-whisper" },
@@ -462,8 +462,10 @@ dependencies = [
     { name = "genanki" },
     { name = "pandas" },
     { name = "peewee" },
+    { name = "pydantic" },
     { name = "pydub" },
     { name = "pysrt" },
+    { name = "pyyaml" },
     { name = "spacy" },
 ]
 
@@ -476,8 +478,10 @@ requires-dist = [
     { name = "genanki", specifier = ">=0.13.1" },
     { name = "pandas", specifier = ">=2.3.1" },
     { name = "peewee", specifier = ">=3.18.2" },
+    { name = "pydantic", specifier = ">=2.11.7" },
     { name = "pydub", specifier = ">=0.25.1" },
     { name = "pysrt", specifier = ">=1.1.2" },
+    { name = "pyyaml", specifier = ">=6.0.2" },
     { name = "spacy", specifier = ">=3.8.7" },
 ]
 

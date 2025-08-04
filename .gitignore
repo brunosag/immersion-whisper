@@ -5,3 +5,4 @@ output/
 .env
 *.md
 *.db
+config.local.yaml

@@ -5,7 +5,7 @@ from pathlib import Path
 import pysrt
 from pydub import AudioSegment
 
-PADDING_MS = 1000
+from ..config import SETTINGS
 
 
 def srt_time_to_ms(time_obj: pysrt.SubRipTime):
@@ -16,15 +16,15 @@ def srt_time_to_ms(time_obj: pysrt.SubRipTime):
 
 
 def condense(wav_file: Path, srt_file: Path):
-    if not (OUTPUT_DIR := os.getenv("CONDENSED_AUDIO_DIR")):
-        print("CONDENSED_AUDIO_DIR environment variable is not set. Exiting.")
+    if not (OUTPUT_DIR := os.getenv('CONDENSED_AUDIO_DIR')):
+        print('CONDENSED_AUDIO_DIR environment variable is not set. Exiting.')
         sys.exit(1)
 
     audio = AudioSegment.from_wav(str(wav_file))
     subs = pysrt.open(str(srt_file))
 
     if not subs:
-        print(f"No subtitles found in the file: {srt_file}. Exiting.")
+        print(f'No subtitles found in the file: {srt_file}. Exiting.')
         sys.exit(1)
 
     intervals = []
@@ -32,8 +32,9 @@ def condense(wav_file: Path, srt_file: Path):
         start = srt_time_to_ms(sub.start)
         end = srt_time_to_ms(sub.end)
 
-        padded_start = max(0, start - PADDING_MS)
-        padded_end = end + PADDING_MS
+        padding_ms = SETTINGS.condenser.padding_ms
+        padded_start = max(0, start - padding_ms)
+        padded_end = end + padding_ms
         intervals.append([padded_start, padded_end])
 
     intervals.sort(key=lambda x: x[0])
@@ -53,7 +54,7 @@ def condense(wav_file: Path, srt_file: Path):
         segment = audio[start:end]
         condensed_audio += segment
 
-    output_file = Path(OUTPUT_DIR) / (srt_file.stem + ".mp3")
+    output_file = Path(OUTPUT_DIR) / (srt_file.stem + '.mp3')
     output_file.parent.mkdir(exist_ok=True)
-    condensed_audio.export(output_file, format="mp3", parameters=["-q:a", "2"])
-    print(f"Condensed audio saved to: {output_file}")
+    condensed_audio.export(output_file, format='mp3', parameters=['-q:a', '2'])
+    print(f'Condensed audio saved to: {output_file}')
