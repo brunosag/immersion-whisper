@@ -1,4 +1,3 @@
-import os
 import sys
 from pathlib import Path
 
@@ -15,16 +14,13 @@ def srt_time_to_ms(time_obj: pysrt.SubRipTime):
     ) * 1000 + time_obj.milliseconds
 
 
-def condense(wav_file: Path, srt_file: Path):
-    if not (OUTPUT_DIR := os.getenv('CONDENSED_AUDIO_DIR')):
-        print('CONDENSED_AUDIO_DIR environment variable is not set. Exiting.')
-        sys.exit(1)
-
-    audio = AudioSegment.from_wav(str(wav_file))
-    subs = pysrt.open(str(srt_file))
+def condense(wav_path: Path, srt_path: Path, output_path: Path):
+    """Condenses the audio of a WAV file based on the provided SRT file."""
+    audio = AudioSegment.from_wav(str(wav_path))
+    subs = pysrt.open(str(srt_path))
 
     if not subs:
-        print(f'No subtitles found in the file: {srt_file}. Exiting.')
+        print(f"No subtitles found in '{srt_path}'. Exiting.")
         sys.exit(1)
 
     intervals = []
@@ -54,7 +50,6 @@ def condense(wav_file: Path, srt_file: Path):
         segment = audio[start:end]
         condensed_audio += segment
 
-    output_file = Path(OUTPUT_DIR) / (srt_file.stem + '.mp3')
-    output_file.parent.mkdir(exist_ok=True)
-    condensed_audio.export(output_file, format='mp3', parameters=['-q:a', '2'])
-    print(f'Condensed audio saved to: {output_file}')
+    output_path.parent.mkdir(exist_ok=True)
+    condensed_audio.export(output_path, format='mp3', parameters=['-q:a', '2'])
+    print(f"Condensed audio saved to '{output_path}'")

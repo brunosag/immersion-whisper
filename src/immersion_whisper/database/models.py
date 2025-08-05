@@ -1,6 +1,6 @@
 import peewee as pw
 
-db = pw.SqliteDatabase("subtitles.db")
+db = pw.SqliteDatabase('subtitles.db')
 
 
 class BaseModel(pw.Model):
@@ -27,5 +27,5 @@ class Lemma(BaseModel):
 
 class SubtitleLemma(BaseModel):
     id = pw.AutoField()
-    subtitle = pw.ForeignKeyField(Subtitle, backref="lemmas")
-    lemma = pw.ForeignKeyField(Lemma, backref="subtitles")
+    subtitle = pw.ForeignKeyField(Subtitle, backref='lemmas')
+    lemma = pw.ForeignKeyField(Lemma, backref='subtitles')

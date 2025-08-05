@@ -6,7 +6,7 @@ import requests
 from ..config import SETTINGS
 
 
-def translate(srt_path: Path, video_path: Path):
+def translate(srt_path: Path, output_path: Path):
     if not (api_key := os.getenv('GEMINI_API_KEY')):
         raise ValueError('Error: GEMINI_API_KEY environment variable is not set.')
 
@@ -32,7 +32,6 @@ def translate(srt_path: Path, video_path: Path):
     try:
         data = response.json()
         translated_text = data['candidates'][0]['content']['parts'][0]['text']
-        output_path = video_path.with_suffix('.srt')
         output_path.write_text(translated_text, encoding='utf-8')
         print(f"Translated subtitles saved to '{output_path}'")
     except (KeyError, IndexError) as e:

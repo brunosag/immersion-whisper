@@ -1,18 +1,22 @@
 import logging
 import random
+import re
+import sys
+from pathlib import Path
 
 import pandas as pd
 import spacy
 
 from ..config import SETTINGS
 from ..database.models import Lemma, Subtitle, SubtitleLemma, db
+from ..database.setup import reset_db
 
 logger = logging.getLogger(__name__)
 
 _NLP_MODEL = None
 
 
-def get_nlp():
+def _get_nlp():
     """Lazily loads the spaCy model."""
     global _NLP_MODEL
     if _NLP_MODEL is None:
@@ -20,6 +24,45 @@ def get_nlp():
             SETTINGS.sub_processor.spacy_model, disable=['parser', 'ner']
         )
     return _NLP_MODEL
+
+
+def parse_srt_file(srt_path: Path) -> list[dict]:
+    """Parses an SRT file and returns a list of subtitle segments."""
+    segments = []
+
+    if not srt_path.is_file():
+        sys.exit(f'Error: SRT file not found at {srt_path}')
+
+    with open(srt_path, 'r', encoding='utf-8') as f:
+        content = f.read().strip()
+
+    # Regex to find blocks: number, timestamp, and text
+    block_pattern = re.compile(
+        r'(\d+)\s*?\n'  # Sequence number
+        r'(\d{2}:\d{2}:\d{2},\d{3})\s*?-->\s*?(\d{2}:\d{2}:\d{2},\d{3})\s*?\n'  # Timestamps
+        r'([\s\S]*?)(?=\n\n|\Z)',  # Subtitle text
+        re.MULTILINE,
+    )
+
+    for match in block_pattern.finditer(content):
+        _, start_time_str, end_time_str, text = match.groups()
+        segments.append(
+            {
+                'start': srt_time_to_seconds(start_time_str),
+                'end': srt_time_to_seconds(end_time_str),
+                'text': text.strip(),
+            }
+        )
+    return segments
+
+
+def srt_time_to_seconds(time_str: str) -> float:
+    """Converts an SRT time string HH:MM:SS,ms to seconds."""
+    hours, minutes, seconds_milliseconds = time_str.split(':')
+    seconds, milliseconds = seconds_milliseconds.replace(',', ' ').split()
+    return (
+        int(hours) * 3600 + int(minutes) * 60 + int(seconds) + int(milliseconds) / 1000
+    )
 
 
 class SubtitleProcessor:
@@ -44,14 +87,14 @@ class SubtitleProcessor:
             {
                 'text': text,
                 'episode_number': episode,
-                'starts_at': start,
-                'ends_at': end,
+                'starts_at': round(start, 3),
+                'ends_at': round(end, 3),
             }
         )
 
     def _lemmatize_batch(self, texts: list[str]) -> list[list[str]]:
         """Lemmatizes a batch of texts."""
-        nlp = get_nlp()
+        nlp = _get_nlp()
         lemmas_list: list[list[str]] = []
         for doc in nlp.pipe(texts):
             lemmas_list.append(
@@ -164,3 +207,16 @@ def process_subtitle(text: str, episode: int, start: float, end: float):
 def flush_batch():
     """Public API to process the current batch."""
     _processor.process()
+
+
+def process_subtitles(srt_path: Path):
+    """Processes subtitles from an SRT file and stores them in the database."""
+    reset_db()
+    episode_number = int(srt_path.stem) if srt_path.stem.isnumeric() else 0
+    segments = parse_srt_file(srt_path)
+    for segment in segments:
+        process_subtitle(
+            segment['text'], episode_number, segment['start'], segment['end']
+        )
+    flush_batch()
+    print(f"Subtitles at '{srt_path}' processed and stored.")

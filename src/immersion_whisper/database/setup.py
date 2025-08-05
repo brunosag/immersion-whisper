@@ -27,7 +27,6 @@ def _setup_database_elements():
     """Shared logic for creating tables and triggers."""
     db.create_tables([Subtitle, Lemma, SubtitleLemma], safe=True)
     create_triggers()
-    print("Database tables and triggers are set up.")
 
 
 def init_db():
@@ -36,7 +35,7 @@ def init_db():
         db.connect()
         _setup_database_elements()
     except Exception as e:
-        print(f"An error occurred during DB initialization: {e}")
+        print(f'An error occurred during DB initialization: {e}')
     finally:
         if not db.is_closed():
             db.close()
@@ -49,16 +48,16 @@ def reset_db():
         db.drop_tables([Subtitle, Lemma, SubtitleLemma], safe=True)
         _setup_database_elements()
     except Exception as e:
-        print(f"An error occurred during DB reset: {e}")
+        print(f'An error occurred during DB reset: {e}')
     finally:
         if not db.is_closed():
             db.close()
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     import sys
 
-    if len(sys.argv) > 1 and sys.argv[1] == "reset":
+    if len(sys.argv) > 1 and sys.argv[1] == 'reset':
         reset_db()
     else:
         init_db()

@@ -5,6 +5,13 @@ import yaml
 from pydantic import BaseModel
 
 
+class PipelineConfig(BaseModel):
+    transcribe: bool
+    translate: bool
+    condense: bool
+    process_subs: bool
+
+
 class ModelConfig(BaseModel):
     name: str
     device: str
@@ -43,6 +50,7 @@ class SubProcessorConfig(BaseModel):
 
 
 class Config(BaseModel):
+    pipeline: PipelineConfig
     transcriber: TranscriberConfig
     translator: TranslatorConfig
     condenser: CondenserConfig
