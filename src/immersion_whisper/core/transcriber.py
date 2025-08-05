@@ -90,7 +90,7 @@ def transcribe(input_file: Path) -> Path:
     srt_path = output_dir / f'{input_file.stem}.srt'
     audio_path = _extract_audio(input_file)
     is_temp = audio_path != input_file
-    episode_number = int(input_file.stem)
+    episode_number = int(input_file.stem) if input_file.stem.isnumeric() else 0
     segments: list[dict] = []
 
     try:
