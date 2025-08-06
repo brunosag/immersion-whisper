@@ -1,3 +1,10 @@
+pipeline:
+  transcribe: true
+  translate: true
+  condense: true
+  process_subs: true
+  create_deck: false
+
 transcriber:
   language: fr
   hotwords: []

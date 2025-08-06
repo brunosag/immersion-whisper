@@ -1,12 +1,12 @@
 import os
 from pathlib import Path
 
-import requests
-
 from ..config import SETTINGS
 
 
 def translate(srt_path: Path, output_path: Path):
+    import requests
+
     if not (api_key := os.getenv('GEMINI_API_KEY')):
         raise ValueError('Error: GEMINI_API_KEY environment variable is not set.')
 
@@ -25,7 +25,7 @@ def translate(srt_path: Path, output_path: Path):
     headers = {'Content-Type': 'application/json'}
     payload = {'contents': [{'parts': [{'text': prompt}]}]}
 
-    print(f"Translating '{srt_path.name}'...")
+    print(f"Translating '{srt_path.name}': {src_lang} -> {tgt_lang}...")
     response = requests.post(api_url, headers=headers, json=payload)
     response.raise_for_status()
 
