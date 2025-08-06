@@ -10,6 +10,7 @@ class PipelineConfig(BaseModel):
     translate: bool
     condense: bool
     process_subs: bool
+    create_deck: bool
 
 
 class ModelConfig(BaseModel):
