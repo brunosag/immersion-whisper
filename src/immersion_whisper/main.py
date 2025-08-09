@@ -15,8 +15,9 @@ from .core.translator import translate
 
 load_dotenv()
 logging.basicConfig(
-    level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
+logger = logging.getLogger(__name__)
 
 
 def main():
@@ -37,7 +38,7 @@ def main():
 
     if SETTINGS.pipeline.condense:
         if not (condensed_dir := os.getenv('CONDENSED_AUDIO_DIR')):
-            logging.error(
+            logger.error(
                 'CONDENSED_AUDIO_DIR environment variable is not set. Exiting.'
             )
             sys.exit(1)

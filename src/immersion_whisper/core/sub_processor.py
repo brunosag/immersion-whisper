@@ -31,7 +31,8 @@ def parse_srt_file(srt_path: Path) -> list[dict]:
     segments = []
 
     if not srt_path.is_file():
-        sys.exit(f'Error: SRT file not found at {srt_path}')
+        logger.error('SRT file not found at %s', srt_path)
+        sys.exit(1)
 
     with open(srt_path, 'r', encoding='utf-8') as f:
         content = f.read().strip()
@@ -219,4 +220,4 @@ def process_subtitles(srt_path: Path):
             segment['text'], episode_number, segment['start'], segment['end']
         )
     flush_batch()
-    print(f"Subtitles at '{srt_path}' processed and stored.")
+    logger.info("Subtitles at '%s' processed and stored.", srt_path)

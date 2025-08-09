@@ -6,9 +6,9 @@ from pathlib import Path
 
 from ..config import SETTINGS
 
-logging.basicConfig()
-logger = logging.getLogger('faster_whisper')
-logger.setLevel(logging.WARNING)
+fw_logger = logging.getLogger('faster_whisper')
+fw_logger.setLevel(logging.WARNING)
+logger = logging.getLogger(__name__)
 
 
 def extract_audio(input_path: Path, lang: str = 'fre') -> Path:
@@ -42,12 +42,15 @@ def transcribe(audio_path: Path, srt_path: Path):
     from faster_whisper.transcribe import VadOptions
 
     if not audio_path.is_file():
-        sys.exit(f"Error: Input audio file not found at '{audio_path}'")
+        logger.error("Input audio file not found at '%s'", audio_path)
+        sys.exit(1)
     if srt_path.is_file():
-        print(f"SRT file already exists at '{srt_path}'. Skipping transcription.")
+        logger.info(
+            "SRT file already exists at '%s'. Skipping transcription.", srt_path
+        )
         return
 
-    print(f'Loading {SETTINGS.transcriber.model.name} model...')
+    logger.info('Loading %s model...', SETTINGS.transcriber.model.name)
     model = WhisperModel(
         SETTINGS.transcriber.model.name,
         device=SETTINGS.transcriber.model.device,
@@ -62,8 +65,9 @@ def transcribe(audio_path: Path, srt_path: Path):
         min_silence_duration_ms=SETTINGS.transcriber.vad.min_silence_duration_ms,
         speech_pad_ms=SETTINGS.transcriber.vad.speech_pad_ms,
     )
-    print(
-        f'Starting transcription (VAD: {"ON" if SETTINGS.transcriber.vad.active else "OFF"})...'
+    logger.info(
+        'Starting transcription (VAD: %s)...',
+        'ON' if SETTINGS.transcriber.vad.active else 'OFF',
     )
     segments_iter, _ = model.transcribe(
         str(audio_path),
@@ -83,4 +87,4 @@ def transcribe(audio_path: Path, srt_path: Path):
             srt_file.write(
                 f'{i + 1}\n{_format_timestamp(seg["start"])} --> {_format_timestamp(seg["end"])}\n{seg["text"].lstrip()}\n\n'
             )
-    print(f"Transcription complete. SRT file saved to '{srt_path}'")
+    logger.info("Transcription complete. SRT file saved to '%s'", srt_path)

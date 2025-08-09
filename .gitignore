@@ -6,3 +6,4 @@ output/
 *.md
 *.db
 config.local.yaml
+.aider*

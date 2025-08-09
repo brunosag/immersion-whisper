@@ -1,8 +1,11 @@
+import logging
 from pathlib import Path
 from typing import Any, MutableMapping
 
 import yaml
 from pydantic import BaseModel
+
+logger = logging.getLogger(__name__)
 
 
 class PipelineConfig(BaseModel):
@@ -87,7 +90,7 @@ def load_config(
             local_config = yaml.safe_load(file)
             config = deep_merge(config, local_config)
     except FileNotFoundError:
-        print('No local config found. Using default settings')
+        logger.warning('No local config found. Using default settings')
 
     return Config(**config)
 

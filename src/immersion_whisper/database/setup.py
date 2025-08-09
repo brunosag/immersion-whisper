@@ -1,4 +1,8 @@
+import logging
+
 from .models import Lemma, Subtitle, SubtitleLemma, db
+
+logger = logging.getLogger(__name__)
 
 
 def create_triggers():
@@ -35,7 +39,7 @@ def init_db():
         db.connect()
         _setup_database_elements()
     except Exception as e:
-        print(f'An error occurred during DB initialization: {e}')
+        logger.error('An error occurred during DB initialization: %s', e)
     finally:
         if not db.is_closed():
             db.close()
@@ -48,7 +52,7 @@ def reset_db():
         db.drop_tables([Subtitle, Lemma, SubtitleLemma], safe=True)
         _setup_database_elements()
     except Exception as e:
-        print(f'An error occurred during DB reset: {e}')
+        logger.error('An error occurred during DB reset: %s', e)
     finally:
         if not db.is_closed():
             db.close()

@@ -1,3 +1,4 @@
+import logging
 import sys
 from pathlib import Path
 
@@ -5,6 +6,8 @@ import pysrt
 from pydub import AudioSegment
 
 from ..config import SETTINGS
+
+logger = logging.getLogger(__name__)
 
 
 def srt_time_to_ms(time_obj: pysrt.SubRipTime):
@@ -16,12 +19,12 @@ def srt_time_to_ms(time_obj: pysrt.SubRipTime):
 
 def condense(wav_path: Path, srt_path: Path, output_path: Path):
     """Condenses the audio of a WAV file based on the provided SRT file."""
-    print('Creating condensed audio...')
+    logger.info('Creating condensed audio...')
     audio = AudioSegment.from_wav(str(wav_path))
     subs = pysrt.open(str(srt_path))
 
     if not subs:
-        print(f"No subtitles found in '{srt_path}'. Exiting.")
+        logger.warning("No subtitles found in '%s'. Exiting.", srt_path)
         sys.exit(1)
 
     intervals = []
@@ -53,4 +56,4 @@ def condense(wav_path: Path, srt_path: Path, output_path: Path):
 
     output_path.parent.mkdir(exist_ok=True)
     condensed_audio.export(output_path, format='mp3', parameters=['-q:a', '2'])
-    print(f"Condensed audio saved to '{output_path}'")
+    logger.info("Condensed audio saved to '%s'", output_path)

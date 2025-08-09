@@ -1,7 +1,10 @@
+import logging
 import os
 from pathlib import Path
 
 from ..config import SETTINGS
+
+logger = logging.getLogger(__name__)
 
 
 def translate(srt_path: Path, output_path: Path):
@@ -25,7 +28,7 @@ def translate(srt_path: Path, output_path: Path):
     headers = {'Content-Type': 'application/json'}
     payload = {'contents': [{'parts': [{'text': prompt}]}]}
 
-    print(f"Translating '{srt_path.name}': {src_lang} -> {tgt_lang}...")
+    logger.info("Translating '%s': %s -> %s...", srt_path.name, src_lang, tgt_lang)
     response = requests.post(api_url, headers=headers, json=payload)
     response.raise_for_status()
 
@@ -33,7 +36,7 @@ def translate(srt_path: Path, output_path: Path):
         data = response.json()
         translated_text = data['candidates'][0]['content']['parts'][0]['text']
         output_path.write_text(translated_text, encoding='utf-8')
-        print(f"Translated subtitles saved to '{output_path}'")
+        logger.info("Translated subtitles saved to '%s'", output_path)
     except (KeyError, IndexError) as e:
-        print(f'Failed to parse API response. {e}')
-        print(f'Full Response:\n{response.text}')
+        logger.error('Failed to parse API response. %s', e)
+        logger.error('Full Response:\n%s', response.text)
