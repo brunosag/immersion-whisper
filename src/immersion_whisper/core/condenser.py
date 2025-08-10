@@ -17,10 +17,10 @@ def srt_time_to_ms(time_obj: pysrt.SubRipTime):
     ) * 1000 + time_obj.milliseconds
 
 
-def condense(wav_path: Path, srt_path: Path, output_path: Path):
+def condense(audio_path: Path, srt_path: Path, output_path: Path):
     """Condenses the audio of a WAV file based on the provided SRT file."""
     logger.info('Creating condensed audio...')
-    audio = AudioSegment.from_wav(str(wav_path))
+    audio = AudioSegment.from_file(str(audio_path))
     subs = pysrt.open(str(srt_path))
 
     if not subs:

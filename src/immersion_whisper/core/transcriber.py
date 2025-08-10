@@ -1,6 +1,5 @@
 import logging
 import sys
-import tempfile
 from datetime import timedelta
 from pathlib import Path
 
@@ -11,25 +10,6 @@ fw_logger.setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
 
-def extract_audio(input_path: Path, lang: str = 'fre') -> Path:
-    """Extracts audio from the input video file using ffmpeg."""
-    import ffmpeg
-
-    try:
-        with tempfile.NamedTemporaryFile(
-            suffix='.wav', delete=False
-        ) as temp_audio_file:
-            temp_audio_path = Path(temp_audio_file.name)
-
-        ffmpeg.input(str(input_path)).output(
-            str(temp_audio_path), map=f'0:a:m:language:{lang}', acodec='pcm_s16le'
-        ).run(capture_stdout=True, capture_stderr=True, overwrite_output=True)
-
-        return temp_audio_path
-    except ffmpeg.Error:
-        return input_path
-
-
 def _format_timestamp(seconds: float) -> str:
     """Formats seconds into SRT timestamp format HH:MM:SS,ms."""
     delta = timedelta(seconds=seconds)
@@ -38,9 +18,6 @@ def _format_timestamp(seconds: float) -> str:
 
 def transcribe(audio_path: Path, srt_path: Path):
     """Transcribes the audio from the input file and generates an SRT file."""
-    from faster_whisper import WhisperModel
-    from faster_whisper.transcribe import VadOptions
-
     if not audio_path.is_file():
         logger.error("Input audio file not found at '%s'", audio_path)
         sys.exit(1)
@@ -51,6 +28,10 @@ def transcribe(audio_path: Path, srt_path: Path):
         return
 
     logger.info('Loading %s model...', SETTINGS.transcriber.model.name)
+
+    from faster_whisper import WhisperModel
+    from faster_whisper.transcribe import VadOptions
+
     model = WhisperModel(
         SETTINGS.transcriber.model.name,
         device=SETTINGS.transcriber.model.device,

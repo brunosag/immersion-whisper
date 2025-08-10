@@ -10,12 +10,13 @@ from .config import SETTINGS
 from .core.condenser import condense
 from .core.deck_creator import create_deck
 from .core.sub_processor import process_subtitles
-from .core.transcriber import extract_audio, transcribe
+from .core.transcriber import transcribe
 from .core.translator import translate
+from .utils import extract_audio, is_audio
 
 load_dotenv()
 logging.basicConfig(
-    level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format='[%(asctime)s] %(message)s', datefmt='%H:%M:%S'
 )
 logger = logging.getLogger(__name__)
 
@@ -23,8 +24,10 @@ logger = logging.getLogger(__name__)
 def main():
     args = parse_args()
 
-    input_file_path = args.input_file
-    audio_path = extract_audio(input_file_path)
+    input_file_path = Path(args.input_file)
+    audio_path = (
+        extract_audio(input_file_path) if is_audio(input_file_path) else input_file_path
+    )
     output_dir = Path('output')
     output_dir.mkdir(exist_ok=True)
     srt_path = output_dir / f'{input_file_path.stem}.srt'
@@ -52,7 +55,7 @@ def main():
         deck_name = input_file_path.stem
         create_deck(input_file_path, srt_path, deck_name)
 
-    if audio_path != args.input_file:
+    if audio_path != input_file_path:
         audio_path.unlink(missing_ok=True)
 
 
