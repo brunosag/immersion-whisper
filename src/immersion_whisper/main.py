@@ -12,7 +12,8 @@ from .core.deck_creator import create_deck
 from .core.sub_processor import process_subtitles
 from .core.transcriber import transcribe
 from .core.translator import translate
-from .utils import extract_audio, is_audio
+from .database.setup import reset_db
+from .utils import extract_audio, get_media_files, is_audio
 
 load_dotenv()
 logging.basicConfig(
@@ -21,22 +22,16 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def main():
-    args = parse_args()
-
-    input_file_path = Path(args.input_file)
-    audio_path = (
-        extract_audio(input_file_path) if is_audio(input_file_path) else input_file_path
-    )
-    output_dir = Path('output')
-    output_dir.mkdir(exist_ok=True)
-    srt_path = output_dir / f'{input_file_path.stem}.srt'
+def run_pipeline(file_path: Path, output_dir: Path):
+    """Runs the main pipeline on one file with the selected steps."""
+    audio_path = extract_audio(file_path) if not is_audio(file_path) else file_path
+    srt_path = output_dir / f'{file_path.stem}.srt'
 
     if SETTINGS.pipeline.transcribe:
         transcribe(audio_path, srt_path)
 
     if SETTINGS.pipeline.translate:
-        translated_srt_path = input_file_path.with_suffix('.srt')
+        translated_srt_path = file_path.with_suffix('.srt')
         translate(srt_path, translated_srt_path)
 
     if SETTINGS.pipeline.condense:
@@ -52,11 +47,31 @@ def main():
         process_subtitles(srt_path)
 
     if SETTINGS.pipeline.create_deck:
-        deck_name = input_file_path.stem
-        create_deck(input_file_path, srt_path, deck_name)
+        deck_name = file_path.stem
+        create_deck(file_path, srt_path, deck_name)
 
-    if audio_path != input_file_path:
+    if audio_path != file_path:
         audio_path.unlink(missing_ok=True)
+
+
+def main():
+    args = parse_args()
+
+    output_dir = Path('output')
+    output_dir.mkdir(exist_ok=True)
+
+    if SETTINGS.pipeline.process_subs:
+        reset_db()
+
+    input_path = Path(args.input_path)
+    if input_path.is_dir():
+        media_file_paths = get_media_files(input_path)
+        logger.info("Found %d media files in '%s'.", len(media_file_paths), input_path)
+        for file_path in media_file_paths:
+            logger.info('---------------- %s ----------------', file_path)
+            run_pipeline(file_path, output_dir)
+    else:
+        run_pipeline(input_path, output_dir)
 
 
 if __name__ == '__main__':

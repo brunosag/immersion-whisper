@@ -1,12 +1,6 @@
 import peewee as pw
 
-db = pw.Proxy()
-
-
-def initialize_database(path='subtitles.db'):
-    database = pw.SqliteDatabase(path)
-    db.initialize(database)
-    return db
+db = pw.SqliteDatabase('subtitles.db')
 
 
 class BaseModel(pw.Model):

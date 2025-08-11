@@ -9,7 +9,6 @@ import spacy
 
 from ..config import SETTINGS
 from ..database.models import Lemma, Subtitle, SubtitleLemma, db
-from ..database.setup import reset_db
 
 logger = logging.getLogger(__name__)
 
@@ -110,7 +109,7 @@ class SubtitleProcessor:
     def process(self):
         """Processes the entire batch of subtitles."""
         self._load_cache_if_needed()
-        logger.info('Processing subtitle batch...')
+        logger.info('Processing subtitles...')
 
         if not self.subtitles_data or self.lemma_cache is None:
             return
@@ -212,7 +211,6 @@ def flush_batch():
 
 def process_subtitles(srt_path: Path):
     """Processes subtitles from an SRT file and stores them in the database."""
-    reset_db()
     episode_number = int(srt_path.stem) if srt_path.stem.isnumeric() else 0
     segments = parse_srt_file(srt_path)
     for segment in segments:

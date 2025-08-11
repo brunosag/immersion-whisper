@@ -46,7 +46,7 @@ def init_db():
 
 
 def reset_db():
-    """DESTRUCTIVE: Drops all tables and re-creates the database from scratch."""
+    """Drops all tables and re-creates the database from scratch."""
     try:
         db.connect()
         db.drop_tables([Subtitle, Lemma, SubtitleLemma], safe=True)

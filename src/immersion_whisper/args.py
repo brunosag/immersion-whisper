@@ -8,7 +8,7 @@ def parse_args():
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument(
-        'input_file',
+        'input_path',
         type=Path,
         help='Path to the video or audio file for transcription.',
     )

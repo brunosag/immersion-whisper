@@ -56,4 +56,4 @@ def condense(audio_path: Path, srt_path: Path, output_path: Path):
 
     output_path.parent.mkdir(exist_ok=True)
     condensed_audio.export(output_path, format='mp3', parameters=['-q:a', '2'])
-    logger.info("Condensed audio saved to '%s'", output_path)
+    logger.info("Condensed audio saved to '%s'.", output_path)
